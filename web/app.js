@@ -41,6 +41,7 @@ const parseDate = (iso) => { const [y, m, d] = iso.split("-").map(Number); retur
 const fmtDate = (iso) => parseDate(iso).toLocaleDateString("pt-BR", { weekday: "short", day: "2-digit", month: "short" });
 const fmtDur = (m) => (m == null ? "" : `${Math.floor(m / 60)}h${String(m % 60).padStart(2, "0")}`);
 const routeOf = (id) => state.data.routes.find((r) => r.id === id);
+const routeLabel = (r) => r.name || `${r.origins.join("/")} → ${r.destinations.join("/")}`;
 
 function costOf(a) {
   const rate = state.milheiro[a.program] ?? state.data.milheiro_brl[a.program] ?? 0;
@@ -92,7 +93,7 @@ function awardCard(a, hot) {
 }
 
 function routeSelect(id, value, withAll) {
-  const opts = state.data.routes.map((r) => `<option value="${esc(r.id)}" ${r.id === value ? "selected" : ""}>${esc(r.origin)} → ${esc(r.destination)}</option>`);
+  const opts = state.data.routes.map((r) => `<option value="${esc(r.id)}" ${r.id === value ? "selected" : ""}>${esc(routeLabel(r))}</option>`);
   if (withAll) opts.unshift(`<option value="all" ${value === "all" ? "selected" : ""}>Todas as rotas</option>`);
   return `<select id="${id}" class="select" aria-label="Rota">${opts.join("")}</select>`;
 }
@@ -196,7 +197,8 @@ function viewAlerts() {
     .filter((a) => state.programs.has(a.program))
     .sort((x, y) => x.cost - y.cost);
   const rules = state.data.routes.map((r) => `
-    <div class="form-row"><div><b>${esc(r.origin)} → ${esc(r.destination)}</b>
+    <div class="form-row"><div><b>${esc(routeLabel(r))}</b>
+      <div class="note">${esc(r.origins.join(", "))} → ${esc(r.destinations.join(", "))}</div>
       <div class="note">${esc(fmtDate(r.date_from))} a ${esc(fmtDate(r.date_to))} · ${r.passengers} pax</div>
       ${(r.alerts || []).map((a) => `<div class="note">🔔 ${esc(describeRule(a))}</div>`).join("") || '<div class="note">sem alertas</div>'}
     </div></div>`).join("");

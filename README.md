@@ -27,17 +27,19 @@ Edite `config/config.json` (dá para fazer pelo próprio iPhone, no site do GitH
 
 ```json
 {
-  "id": "gru-lis",
-  "origin": "GRU",
-  "destination": "LIS",
-  "date_from": "2027-01-10",
-  "date_to": "2027-02-28",
+  "id": "sp-florida",
+  "name": "São Paulo → Flórida",
+  "origin": ["GRU", "VCP"],
+  "destination": ["MIA", "MCO"],
+  "date_from": "2027-07-01",
+  "date_to": "2027-12-31",
   "cabins": ["economy", "business"],
   "passengers": 1,
-  "alerts": [{ "cabin": "business", "max_miles": 110000 }]
+  "alerts": [{ "cabin": "economy", "max_miles": 35000 }]
 }
 ```
 
+- `origin` / `destination`: um aeroporto (`"GRU"`) ou vários (`["GRU", "VCP"]`); todas as combinações são buscadas.
 - `cabins`: `economy`, `premium`, `business`, `first`.
 - `alerts`: cada regra pode ter `cabin`, `program` (`smiles`/`latam`/`azul`), `max_miles` e `max_cost_brl`.
 - `milheiro_brl`: quanto valem 1.000 milhas de cada programa, usado no ranking por custo em R$
