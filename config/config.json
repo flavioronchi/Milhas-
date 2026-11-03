@@ -1,0 +1,47 @@
+{
+  "milheiro_brl": {
+    "smiles": 16,
+    "latam": 25,
+    "azul": 14
+  },
+  "sources": ["sample"],
+  "routes": [
+    {
+      "id": "gru-lis",
+      "origin": "GRU",
+      "destination": "LIS",
+      "date_from": "2027-01-10",
+      "date_to": "2027-02-28",
+      "cabins": ["economy", "business"],
+      "passengers": 1,
+      "alerts": [
+        { "cabin": "business", "max_miles": 110000 },
+        { "cabin": "economy", "max_cost_brl": 1000 }
+      ]
+    },
+    {
+      "id": "gru-mia",
+      "origin": "GRU",
+      "destination": "MIA",
+      "date_from": "2027-01-10",
+      "date_to": "2027-02-28",
+      "cabins": ["economy", "business"],
+      "passengers": 2,
+      "alerts": [
+        { "cabin": "economy", "max_miles": 30000 }
+      ]
+    },
+    {
+      "id": "gru-scl",
+      "origin": "GRU",
+      "destination": "SCL",
+      "date_from": "2027-01-10",
+      "date_to": "2027-02-28",
+      "cabins": ["economy"],
+      "passengers": 1,
+      "alerts": [
+        { "cabin": "economy", "max_cost_brl": 350 }
+      ]
+    }
+  ]
+}

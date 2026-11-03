@@ -1,0 +1,39 @@
+name: Buscar resgates
+
+on:
+  workflow_dispatch:
+  # Liga a busca automática quando o primeiro coletor real estiver pronto:
+  # schedule:
+  #   - cron: "17 */6 * * *"   # a cada 6 horas
+
+permissions:
+  contents: write
+
+concurrency:
+  group: collect
+  cancel-in-progress: false
+
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Instalar dependências
+        run: pip install -r requirements.txt
+      - name: Buscar
+        run: python -m collector
+      - name: Salvar resultados
+        run: |
+          git config user.name "milhas-bot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add web/data/results.json
+          if git diff --cached --quiet; then
+            echo "Sem mudanças."
+          else
+            git commit -m "Atualiza resgates"
+            git push
+          fi

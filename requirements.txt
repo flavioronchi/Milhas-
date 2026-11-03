@@ -1,0 +1,1 @@
+# Dependências do coletor (playwright entra junto com o primeiro coletor real).
