@@ -2,9 +2,30 @@ name: Buscar resgates
 
 on:
   workflow_dispatch:
+    inputs:
+      program:
+        description: "Programa: all, smiles, latam ou azul"
+        required: false
+        default: ""
+      origin:
+        description: "Origem (ex.: GRU ou SAO)"
+        required: false
+        default: ""
+      destination:
+        description: "Destino (vazio = destinos populares)"
+        required: false
+        default: ""
+      date:
+        description: "Data (AAAA-MM-DD)"
+        required: false
+        default: ""
+      flex:
+        description: "Flexibilidade em dias (0 = data exata, 2 = ± 2 dias)"
+        required: false
+        default: "0"
   # Liga a busca automática quando o primeiro coletor real estiver pronto:
   # schedule:
-  #   - cron: "17 */6 * * *"   # a cada 6 horas
+  #   - cron: "17 */2 * * *"   # a cada 2 horas
 
 permissions:
   contents: write
@@ -25,7 +46,11 @@ jobs:
       - name: Instalar dependências
         run: pip install -r requirements.txt
       - name: Buscar
-        run: python -m collector
+        env:
+          # O pedido vem do app; passa por variável de ambiente (nunca direto no shell)
+          # e é validado pelo coletor.
+          REQUEST: ${{ toJSON(github.event.inputs) }}
+        run: python -m collector --request-env REQUEST
       - name: Salvar resultados
         run: |
           git config user.name "milhas-bot"
@@ -35,5 +60,6 @@ jobs:
             echo "Sem mudanças."
           else
             git commit -m "Atualiza resgates"
+            git pull --rebase origin main
             git push
           fi

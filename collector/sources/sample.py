@@ -13,7 +13,8 @@ _BASE = {
     "azul": {"economy": (28_000, 120_000), "business": (100_000, 300_000)},
 }
 _CARRIERS = {"smiles": ["G3", "AF", "KL", "TP"], "latam": ["LA", "IB", "DL"], "azul": ["AD", "TP", "UA"]}
-_LONG_HAUL = {"LIS", "MAD", "CDG", "FCO", "LHR", "MIA", "MCO", "JFK"}
+# Trechos curtos (América do Sul e Brasil); o resto é tratado como longo.
+_SHORT_HAUL = {"EZE", "AEP", "SCL", "LIM", "BOG", "MVD", "BRC", "ASU", "GRU", "VCP", "CGH", "GIG", "SDU", "BSB", "CNF", "POA", "CWB", "FLN", "REC", "SSA", "FOR", "NAT", "BEL", "MAO"}
 
 
 class SampleSource(Source):
@@ -27,7 +28,7 @@ class SampleSource(Source):
 
     def search(self, program: str, origin: str, destination: str, day: date, route: Route) -> list[Award]:
         awards: list[Award] = []
-        long_haul = destination in _LONG_HAUL or origin in _LONG_HAUL
+        long_haul = not (destination in _SHORT_HAUL and origin in _SHORT_HAUL)
         scale = 1.0 if long_haul else 0.35
         cabins = _BASE[program]
         for cabin in route.cabins:
@@ -48,7 +49,6 @@ class SampleSource(Source):
             carrier = rng.choice(_CARRIERS[program])
             awards.append(
                 Award(
-                    route_id=route.id,
                     program=program,
                     origin=origin,
                     destination=destination,

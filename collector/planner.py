@@ -1,8 +1,9 @@
-"""Busca aos poucos: decide quais buscas fazer em cada rodada e acompanha a varredura.
+"""Busca aos poucos: decide quais buscas fazer em cada rodada e acompanha o progresso.
 
-Uma *varredura* é uma passada completa por todas as buscas (programa × trecho × data)
-das rotas configuradas. Cada rodada faz só um lote; quando todas as buscas da
-varredura atual foram feitas, ela é marcada como completa e uma nova começa.
+- Pedidos sob demanda (feitos no app) têm prioridade: cada um é coberto uma vez.
+- Rotas monitoradas são cobertas em *varreduras*: uma passada completa por todas as
+  buscas (programa × trecho × data). Quando termina, a varredura é marcada como
+  completa e uma nova começa, para manter os preços atualizados.
 """
 from __future__ import annotations
 
@@ -18,11 +19,15 @@ class Task:
     origin: str
     destination: str
     day: date
-    route_id: str
+    route: Route
 
     @property
     def key(self) -> str:
-        return f"{self.program}|{self.origin}|{self.destination}|{self.day.isoformat()}"
+        return task_key(self.program, self.origin, self.destination, self.day.isoformat())
+
+
+def task_key(program: str, origin: str, destination: str, day: str) -> str:
+    return f"{program}|{origin}|{destination}|{day}"
 
 
 def all_tasks(routes: list[Route], programs: tuple[str, ...], today: date) -> list[Task]:
@@ -30,11 +35,12 @@ def all_tasks(routes: list[Route], programs: tuple[str, ...], today: date) -> li
     alternando trechos, para os resultados parciais já cobrirem todas as combinações."""
     seen, tasks = set(), []
     for r in routes:
+        progs = [p for p in programs if p in r.programs]
         day = max(r.date_from, today)
         while day <= r.date_to:
             for origin, destination in r.pairs():
-                for program in programs:
-                    t = Task(program, origin, destination, day, r.id)
+                for program in progs:
+                    t = Task(program, origin, destination, day, r)
                     if t.key not in seen:
                         seen.add(t.key)
                         tasks.append(t)
@@ -42,9 +48,8 @@ def all_tasks(routes: list[Route], programs: tuple[str, ...], today: date) -> li
     return tasks
 
 
-def pick_batch(tasks: list[Task], checked: dict[str, str], sweep_started_at: str, limit: int) -> list[Task]:
-    """Lote da rodada: primeiro o que ainda não foi buscado nesta varredura,
-    começando pelo que nunca foi buscado, depois o mais antigo."""
-    pending = [t for t in tasks if checked.get(t.key, "") < sweep_started_at]
-    pending.sort(key=lambda t: checked.get(t.key, ""))  # "" (nunca) vem primeiro; sort é estável
-    return pending[:limit]
+def pending(tasks: list[Task], checked: dict[str, str], since: str) -> list[Task]:
+    """Buscas não feitas desde `since`; as nunca feitas primeiro, depois as mais antigas."""
+    out = [t for t in tasks if checked.get(t.key, "") < since]
+    out.sort(key=lambda t: checked.get(t.key, ""))  # sort estável mantém a ordem por data
+    return out

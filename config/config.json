@@ -18,6 +18,59 @@
       "delay_seconds": 0
     }
   },
+  "airport_groups": {
+    "SAO": [
+      "GRU",
+      "VCP"
+    ],
+    "RIO": [
+      "GIG"
+    ],
+    "NYC": [
+      "JFK",
+      "EWR"
+    ],
+    "FLORIDA": [
+      "MIA",
+      "MCO",
+      "FLL"
+    ]
+  },
+  "popular_destinations": [
+    "MIA",
+    "MCO",
+    "FLL",
+    "JFK",
+    "EWR",
+    "BOS",
+    "IAD",
+    "ATL",
+    "LAX",
+    "LAS",
+    "YYZ",
+    "CUN",
+    "PUJ",
+    "PTY",
+    "EZE",
+    "SCL",
+    "LIM",
+    "BOG",
+    "MVD",
+    "BRC",
+    "LIS",
+    "OPO",
+    "MAD",
+    "BCN",
+    "CDG",
+    "FCO",
+    "MXP",
+    "LHR",
+    "AMS",
+    "FRA",
+    "ZRH",
+    "DXB",
+    "DOH"
+  ],
   "routes": [
     {
       "id": "sp-florida",

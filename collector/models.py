@@ -17,6 +17,18 @@ def _airports(d: dict, key: str) -> tuple[str, ...]:
     return tuple(c.strip().upper() for c in codes)
 
 
+def _programs(d: dict) -> tuple[str, ...]:
+    """"programs" opcional: lista, "all" ou ausente (= todos)."""
+    v = d.get("programs") or "all"
+    if v == "all":
+        return PROGRAMS
+    progs = (v,) if isinstance(v, str) else tuple(v)
+    for p in progs:
+        if p not in PROGRAMS:
+            raise ValueError(f"Rota {d.get('id')}: programa inválido '{p}'")
+    return progs
+
+
 @dataclass(frozen=True)
 class Route:
     id: str
@@ -28,6 +40,7 @@ class Route:
     passengers: int = 1
     alerts: tuple[dict, ...] = ()
     name: str | None = None
+    programs: tuple[str, ...] = PROGRAMS
 
     @classmethod
     def from_dict(cls, d: dict) -> "Route":
@@ -45,6 +58,16 @@ class Route:
             passengers=int(d.get("passengers", 1)),
             alerts=tuple(d.get("alerts") or ()),
             name=d.get("name"),
+            programs=_programs(d),
+        )
+
+    def contains(self, origin: str, destination: str, day: str, program: str, cabin: str) -> bool:
+        return (
+            origin in self.origins
+            and destination in self.destinations
+            and self.date_from.isoformat() <= day <= self.date_to.isoformat()
+            and program in self.programs
+            and cabin in self.cabins
         )
 
     def pairs(self) -> list[tuple[str, str]]:
@@ -59,6 +82,7 @@ class Route:
         d["origins"] = list(self.origins)
         d["destinations"] = list(self.destinations)
         d["alerts"] = list(self.alerts)
+        d["programs"] = list(self.programs)
         return d
 
 
@@ -66,7 +90,6 @@ class Route:
 class Award:
     """Um resgate disponível (preço por passageiro, só ida)."""
 
-    route_id: str
     program: str
     origin: str
     destination: str
@@ -82,6 +105,7 @@ class Award:
     arrive: str | None = None  # HH:MM local (+1 se dia seguinte)
     duration_min: int | None = None
     cost_brl: float | None = None  # calculado por pricing.py
+    route_id: str | None = None  # (legado) não é mais usado
 
     def to_dict(self) -> dict:
         return asdict(self)

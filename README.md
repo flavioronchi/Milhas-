@@ -21,6 +21,17 @@ config/config.json ──► collector (Smiles / LATAM / Azul) ──► web/dat
 | 3. Alertas no Telegram | ⏳ |
 | 4. Coletores Azul e LATAM Pass | ⏳ |
 
+## Buscador (aba Buscar)
+
+Escolha o programa (ou todos), a origem (`GRU`, ou um grupo como `SAO` = GRU + VCP), o destino
+(opcional: em branco = `popular_destinations` do config) e a data (exata ou ± 2 dias).
+
+- O app mostra na hora o que o robô já buscou para aquele pedido e quanto falta.
+- Se faltar algo, **Pedir ao robô para buscar** dispara o workflow *Buscar resgates* com o pedido;
+  ele tem prioridade sobre as rotas monitoradas e também é feito aos poucos.
+- Para isso o app precisa de uma chave do GitHub (fine-grained token só deste repositório, com
+  permissão **Actions: Read and write**), cadastrada uma vez em **Ajustes**; fica só no aparelho.
+
 ## Busca aos poucos
 
 Para não ser bloqueado, cada rodada faz só um lote de buscas (programa × trecho × data) e guarda
