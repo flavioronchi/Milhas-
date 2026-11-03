@@ -162,7 +162,7 @@ function viewBest() {
       ${cabinSeg("f-cabin", state.cabin, allCabins(), true)}
       ${programChips()}
     </section>
-    <p class="muted small">${num(list.length)} resgates · ordenados pelo custo em R$ (milhas × milheiro + taxas), por pessoa, só ida</p>
+    <p class="muted small">${num(list.length)} resgates${isPartial() ? " (parcial)" : ""} · ordenados pelo custo em R$ (milhas × milheiro + taxas), por pessoa, só ida</p>
     <div class="list" style="margin-top:8px">
       ${shown.length ? shown.map((a) => awardCard(a, hot)).join("") : '<div class="empty">Nenhum resgate com esses filtros.</div>'}
     </div>
@@ -278,6 +278,29 @@ function viewSettings() {
       Preços por pessoa, só ida, e podem mudar a qualquer momento — confirme no site do programa antes de emitir.</p>`;
 }
 
+// ====== Progresso da busca (aos poucos) ======
+function renderProgress() {
+  const el = $("#progress");
+  const p = state.data.progress;
+  if (!p || !p.total) { el.hidden = true; return; }
+  const pct = Math.floor((100 * p.done) / p.total);
+  const day = (iso) => new Date(iso).toLocaleString("pt-BR", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" });
+  let html;
+  if (p.just_completed || pct >= 100) {
+    html = `<span class="ok">✓ Busca completa</span> · ${num(p.total)} buscas · ranking final`;
+  } else if (p.last_completed_at) {
+    html = `<span class="ok">✓ Ranking completo</span> (busca de ${esc(day(p.last_completed_at))}) · atualizando preços: <b>${pct}%</b>
+      <div class="bar"><i style="width:${pct}%"></i></div>`;
+  } else {
+    html = `Buscando aos poucos: <b>${pct}%</b> (${num(p.done)} de ${num(p.total)} buscas) · resultados parciais
+      <div class="bar"><i style="width:${pct}%"></i></div>`;
+  }
+  el.innerHTML = html;
+  el.hidden = false;
+}
+
+const isPartial = () => { const p = state.data?.progress; return p && !p.last_completed_at && !p.just_completed; };
+
 // ====== Render e eventos ======
 const VIEWS = { best: ["Melhores resgates", viewBest], calendar: ["Calendário", viewCalendar], alerts: ["Alertas", viewAlerts], settings: ["Ajustes", viewSettings] };
 
@@ -342,6 +365,7 @@ async function load(force) {
     const when = new Date(state.data.generated_at);
     $("#updated").textContent = `Atualizado ${when.toLocaleString("pt-BR", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}`;
     $("#sample-banner").hidden = !state.data.sample;
+    renderProgress();
     if (state.route !== "all" && !routeOf(state.route)) state.route = "all";
     render();
   } catch (err) {

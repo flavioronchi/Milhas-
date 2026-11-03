@@ -4,20 +4,48 @@
     "latam": 25,
     "azul": 14
   },
-  "sources": ["sample"],
+  "sources": [
+    "sample"
+  ],
+  "pacing": {
+    "_comment": "buscas por rodada e pausa entre buscas, por fonte",
+    "smiles": {
+      "per_run": 40,
+      "delay_seconds": 8
+    },
+    "sample": {
+      "per_run": 400,
+      "delay_seconds": 0
+    }
+  },
   "routes": [
     {
       "id": "sp-florida",
       "name": "São Paulo → Flórida",
-      "origin": ["GRU", "VCP"],
-      "destination": ["MIA", "MCO"],
+      "origin": [
+        "GRU",
+        "VCP"
+      ],
+      "destination": [
+        "MIA",
+        "MCO"
+      ],
       "date_from": "2027-07-01",
       "date_to": "2027-12-31",
-      "cabins": ["economy", "business"],
+      "cabins": [
+        "economy",
+        "business"
+      ],
       "passengers": 1,
       "alerts": [
-        { "cabin": "economy", "max_miles": 35000 },
-        { "cabin": "business", "max_miles": 120000 }
+        {
+          "cabin": "economy",
+          "max_miles": 35000
+        },
+        {
+          "cabin": "business",
+          "max_miles": 120000
+        }
       ]
     }
   ]

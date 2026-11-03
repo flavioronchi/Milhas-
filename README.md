@@ -21,6 +21,13 @@ config/config.json ──► collector (Smiles / LATAM / Azul) ──► web/dat
 | 3. Alertas no Telegram | ⏳ |
 | 4. Coletores Azul e LATAM Pass | ⏳ |
 
+## Busca aos poucos
+
+Para não ser bloqueado, cada rodada faz só um lote de buscas (programa × trecho × data) e guarda
+o progresso em `data/state.json`. Quando todas as datas de todas as rotas forem buscadas, a
+**varredura fica completa** e o app mostra o ranking final; em seguida começa outra varredura para
+manter os preços atualizados. O tamanho do lote e a pausa entre buscas ficam em `pacing`, no config.
+
 ## Configurar rotas e alertas
 
 Edite `config/config.json` (dá para fazer pelo próprio iPhone, no site do GitHub):

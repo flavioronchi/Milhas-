@@ -30,7 +30,7 @@ jobs:
         run: |
           git config user.name "milhas-bot"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add web/data/results.json
+          git add web/data/results.json data/state.json
           if git diff --cached --quiet; then
             echo "Sem mudanças."
           else
