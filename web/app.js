@@ -64,14 +64,54 @@ function hotThresholds() {
   return t;
 }
 
+// ====== Links de compra ======
+// Abre a busca do programa já preenchida. Se um coletor real trouxer o link exato
+// (a.booking_url), ele tem prioridade.
+const pad2 = (n) => String(n).padStart(2, "0");
+const BOOKING = {
+  smiles(a, pax) {
+    const [y, m, d] = a.date.split("-").map(Number);
+    const q = new URLSearchParams({
+      adults: pax, children: 0, infants: 0, cabin: "ALL", tripType: 2, segments: 1,
+      departureDate: Date.UTC(y, m - 1, d, 12), returnDate: "", searchType: "g3",
+      isFlexibleDateChecked: false, isElegible: false,
+      originAirport: a.origin, destinationAirport: a.destination,
+      originAirportIsAny: false, destinationAirportIsAny: false, "novo-resultado-voos": true,
+    });
+    return `https://www.smiles.com.br/mfe/emissao-passagem/?${q}`;
+  },
+  latam(a, pax) {
+    const q = new URLSearchParams({
+      origin: a.origin, destination: a.destination, outbound: `${a.date}T12:00:00.000Z`, inbound: "null",
+      adt: pax, chd: 0, inf: 0, trip: "OW", cabin: a.cabin === "economy" ? "Economy" : "Business",
+      redemption: true, sort: "RECOMMENDED",
+    });
+    return `https://www.latamairlines.com/br/pt/oferta-voos?${q}`;
+  },
+  azul(a, pax) {
+    // Mesmo formato que o site da Azul gera (colchetes e barras sem codificar).
+    const [y, m, d] = a.date.split("-");
+    const o = encodeURIComponent(a.origin), de = encodeURIComponent(a.destination);
+    return `https://www.voeazul.com.br/br/pt/home/selecao-voo?c[0].ds=${o}&c[0].std=${m}/${d}/${y}&c[0].as=${de}` +
+      `&p[0].t=ADT&p[0].c=${Number(pax) || 1}&p[0].cp=false&f.dl=3&f.dr=3&cc=PTS`;
+  },
+};
+function bookingUrl(a, pax) {
+  if (a.booking_url) return a.booking_url;
+  return BOOKING[a.program]?.(a, pax) ?? null;
+}
+
 // ====== Componentes ======
 function awardCard(a, hot) {
   const r = routeOf(a.route_id);
   const pax = r?.passengers > 1 ? r.passengers : 1;
   const isHot = hot && a.cost <= hot[`${a.route_id}|${a.cabin}`];
   const stops = a.stops === 0 ? "direto" : `${a.stops} parada${a.stops > 1 ? "s" : ""}`;
+  const url = bookingUrl(a, pax);
+  const tag = url ? "a" : "article";
+  const attrs = url ? ` href="${esc(url)}" target="_blank" rel="noopener noreferrer" aria-label="Abrir no site da ${esc(PROGRAMS[a.program]?.label ?? a.program)}: ${esc(a.origin)} para ${esc(a.destination)}, ${esc(fmtDate(a.date))}"` : "";
   return `
-    <article class="card">
+    <${tag} class="card"${attrs}>
       <div class="card-head">
         <div class="card-route">${esc(a.origin)} → ${esc(a.destination)}</div>
         <div class="card-cost">${brl(a.cost)}</div>
@@ -89,7 +129,8 @@ function awardCard(a, hot) {
           ${pax > 1 ? `<span class="tag">${pax} pax: ${brl(a.cost * pax)}</span>` : ""}
         </span>
       </div>
-    </article>`;
+      ${url ? `<div class="card-cta">Emitir na ${esc(PROGRAMS[a.program]?.label ?? a.program)} ↗</div>` : ""}
+    </${tag}>`;
 }
 
 function routeSelect(id, value, withAll) {
