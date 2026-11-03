@@ -21,16 +21,20 @@ config/config.json ──► collector (Smiles / LATAM / Azul) ──► web/dat
 | 3. Alertas no Telegram | ⏳ |
 | 4. Coletores Azul e LATAM Pass | ⏳ |
 
-## Buscador (aba Buscar)
+## O app
 
-Escolha o programa (ou todos), a origem (`GRU`, ou um grupo como `SAO` = GRU + VCP), o destino
-(opcional: em branco = `popular_destinations` do config) e a data (exata ou ± 2 dias).
+| Aba | O que faz |
+|---|---|
+| **Buscar** | Programa (ou todos), origem, destino (opcional: em branco = `popular_destinations`), ida e volta (opcional), data exata ou ± 2 dias. Mostra na hora o que já foi buscado, a melhor combinação ida + volta e, se faltar algo, pede ao robô. |
+| **Monitoradas** | Resultados das rotas monitoradas. |
+| **Calendário** | Escolha origem, destino, programa, cabine e mês: menor preço de cada dia (`–` sem vaga, `?` não buscado). Pode pedir ao robô o mês inteiro. |
+| **Alertas** | Cadastre/remova rotas monitoradas com o valor-limite do alerta (milhas ou R$). |
+| **Ajustes** | Chave do GitHub e valor do milheiro. |
 
-- O app mostra na hora o que o robô já buscou para aquele pedido e quanto falta.
-- Se faltar algo, **Pedir ao robô para buscar** dispara o workflow *Buscar resgates* com o pedido;
-  ele tem prioridade sobre as rotas monitoradas e também é feito aos poucos.
-- Para isso o app precisa de uma chave do GitHub (fine-grained token só deste repositório, com
-  permissão **Actions: Read and write**), cadastrada uma vez em **Ajustes**; fica só no aparelho.
+Os pedidos do app chegam ao robô pelo workflow *Buscar resgates* (input `command`, JSON validado pelo
+coletor). Para isso o app precisa de uma chave do GitHub (fine-grained token só deste repositório, com
+permissão **Actions: Read and write**), cadastrada uma vez em **Ajustes**; ela fica só no aparelho.
+As rotas monitoradas criadas no app ficam em `data/monitors.json`.
 
 ## Busca aos poucos
 
@@ -39,29 +43,13 @@ o progresso em `data/state.json`. Quando todas as datas de todas as rotas forem 
 **varredura fica completa** e o app mostra o ranking final; em seguida começa outra varredura para
 manter os preços atualizados. O tamanho do lote e a pausa entre buscas ficam em `pacing`, no config.
 
-## Configurar rotas e alertas
+## Configuração (`config/config.json`)
 
-Edite `config/config.json` (dá para fazer pelo próprio iPhone, no site do GitHub):
-
-```json
-{
-  "id": "sp-florida",
-  "name": "São Paulo → Flórida",
-  "origin": ["GRU", "VCP"],
-  "destination": ["MIA", "MCO"],
-  "date_from": "2027-07-01",
-  "date_to": "2027-12-31",
-  "cabins": ["economy", "business"],
-  "passengers": 1,
-  "alerts": [{ "cabin": "economy", "max_miles": 35000 }]
-}
-```
-
-- `origin` / `destination`: um aeroporto (`"GRU"`) ou vários (`["GRU", "VCP"]`); todas as combinações são buscadas.
-- `cabins`: `economy`, `premium`, `business`, `first`.
-- `alerts`: cada regra pode ter `cabin`, `program` (`smiles`/`latam`/`azul`), `max_miles` e `max_cost_brl`.
-- `milheiro_brl`: quanto valem 1.000 milhas de cada programa, usado no ranking por custo em R$
-  (custo = milhas ÷ 1000 × milheiro + taxas). No app, em **Ajustes**, você pode sobrescrever esses valores.
+- `milheiro_brl`: quanto valem 1.000 milhas de cada programa (custo = milhas ÷ 1000 × milheiro + taxas).
+- `pacing`: buscas por rodada e pausa entre buscas, por fonte.
+- `airport_groups`: atalhos de aeroportos (ex.: `SAO` = GRU + VCP).
+- `popular_destinations`: destinos usados quando o destino fica em branco.
+- `routes`: rotas monitoradas fixas (opcional — o normal é criá-las pelo app).
 
 ## Publicar o app (uma vez só)
 

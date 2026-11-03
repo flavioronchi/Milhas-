@@ -5,7 +5,7 @@ primeiro os pedidos feitos no app (sob demanda), depois as rotas monitoradas.
 
 Uso:
   python -m collector                       # rodada normal
-  python -m collector --request-env REQ     # registra o pedido em $REQ (JSON) e já começa por ele
+  python -m collector --command-env CMD     # aplica o comando do app em $CMD (JSON) e faz a rodada
 """
 from __future__ import annotations
 
@@ -32,13 +32,14 @@ def now_iso() -> str:
     return ondemand.utcnow().isoformat(timespec="microseconds")
 
 
-def run(config_path: Path, state_path: Path, out_path: Path, max_per_source: int | None, request: dict | None) -> int:
+def run(config_path: Path, state_path: Path, monitors_path: Path, out_path: Path,
+        max_per_source: int | None, command: dict | None) -> int:
     config = json.loads(config_path.read_text(encoding="utf-8"))
     milheiro = config["milheiro_brl"]
     pacing = config.get("pacing", {})
-    monitored = [Route.from_dict(r) for r in config["routes"]]
     sources = [get_source(n) for n in config.get("sources", [])]
     today = date.today()
+    monitors: list[dict] = json.loads(monitors_path.read_text(encoding="utf-8")) if monitors_path.exists() else []
 
     state = json.loads(state_path.read_text(encoding="utf-8")) if state_path.exists() else {}
     sweep = state.setdefault("sweep", {})
@@ -49,19 +50,36 @@ def run(config_path: Path, state_path: Path, out_path: Path, max_per_source: int
         sweep.update(number=1, started_at=now_iso(), last_completed_at=None)
 
     errors: list[dict] = []
-    if request is not None:
+    last_command = None
+    if command is not None:
         try:
-            req = ondemand.normalize(request, config, today)
-            ondemand.add_request(state, req, ondemand.utcnow())
-            print(f"Pedido registrado: {req['id']} {req['origins']} → {len(req['destinations'])} destino(s), {req['date']} ±{req['flex']}")
-        except (ValueError, TypeError) as exc:
-            errors.append({"source": "pedido", "search": "", "error": f"Pedido inválido: {exc}"})
-            print(f"Pedido inválido: {exc}")
+            kind = command.get("type", "search")
+            if kind in ("search", "calendar"):
+                req = ondemand.normalize_search(command, config, today)
+                ondemand.add_request(state, req, ondemand.utcnow())
+                msg = f"Busca registrada ({req['id']})"
+            elif kind in ("monitor_add", "monitor_remove"):
+                msg = ondemand.apply_monitor_command(monitors, command, config, today)
+                monitors_path.parent.mkdir(parents=True, exist_ok=True)
+                monitors_path.write_text(json.dumps(monitors, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+            else:
+                raise ValueError(f"Comando desconhecido: '{kind}'")
+            last_command = {"ok": True, "message": msg}
+        except (ValueError, TypeError, KeyError) as exc:
+            msg = f"Comando inválido: {exc}"
+            errors.append({"source": "app", "search": "", "error": msg})
+            last_command = {"ok": False, "message": msg}
+        last_command["at"] = now_iso()
+        last_command["type"] = command.get("type", "search")
+        print(last_command["message"])
+
+    monitored = [Route.from_dict(r) for r in config.get("routes", [])] + [Route.from_dict(m) for m in monitors]
+    app_ids = {m["id"] for m in monitors}
 
     # Pedidos ainda abertos (o mais recente primeiro) viram rotas temporárias.
-    requests = [r for r in state["requests"] if r["date"] >= today.isoformat()]
+    requests = [r for r in state["requests"] if r.get("legs") and ondemand.request_last_day(r) >= today.isoformat()]
     state["requests"] = requests
-    req_routes = {r["id"]: ondemand.to_route(r, today) for r in requests}
+    req_routes = {r["id"]: ondemand.to_routes(r, today) for r in requests}
 
     mon_keys, req_keys = set(), {r["id"]: set() for r in requests}
     for source in sources:
@@ -69,7 +87,7 @@ def run(config_path: Path, state_path: Path, out_path: Path, max_per_source: int
         mon_keys.update(t.key for t in mon_tasks)
         queue: list[Task] = []
         for r in requests:
-            tasks = all_tasks([req_routes[r["id"]]], source.programs, today)
+            tasks = all_tasks(req_routes[r["id"]], source.programs, today)
             req_keys[r["id"]].update(t.key for t in tasks)
             if not r.get("completed_at"):
                 queue += pending(tasks, checked, r["fresh_after"])
@@ -155,6 +173,8 @@ def run(config_path: Path, state_path: Path, out_path: Path, max_per_source: int
                 a = Award(**{k: v for k, v in row.items() if k != "checked_at"})
                 for rule in matching_alerts(a, route.alerts):
                     alerts.append({"route_id": route.id, "rule": rule, "award": row})
+    if last_command:
+        state["last_command"] = last_command
 
     progress = {
         "sweep_number": sweep["number"] - (1 if just_completed else 0),
@@ -171,12 +191,13 @@ def run(config_path: Path, state_path: Path, out_path: Path, max_per_source: int
         "milheiro_brl": milheiro,
         "popular_destinations": config.get("popular_destinations", []),
         "airport_groups": config.get("airport_groups", {}),
-        "routes": [r.to_dict() for r in monitored],
+        "routes": [{**r.to_dict(), "managed_by": "app" if r.id in app_ids else "config"} for r in monitored],
         "requests": [
-            {k: r.get(k) for k in ("id", "program", "origins", "destinations", "any_destination", "date", "flex",
-                                   "created_at", "completed_at", "done", "total")}
+            {k: r.get(k) for k in ("id", "type", "program", "origins", "destinations", "any_destination", "legs",
+                                   "date", "flex", "return_date", "month", "created_at", "completed_at", "done", "total")}
             for r in requests
         ],
+        "last_command": state.get("last_command"),
         "progress": progress,
         "checked": {k: checked[k][:16] for k in sorted(all_keys) if k in checked},
         "awards": awards,
@@ -200,24 +221,22 @@ def main() -> None:
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     p.add_argument("--config", type=Path, default=ROOT / "config" / "config.json")
     p.add_argument("--state", type=Path, default=ROOT / "data" / "state.json")
+    p.add_argument("--monitors", type=Path, default=ROOT / "data" / "monitors.json")
     p.add_argument("--out", type=Path, default=ROOT / "web" / "data" / "results.json")
     p.add_argument("--max", type=int, default=None, help="limite de buscas por fonte nesta rodada")
-    p.add_argument("--request-env", metavar="VAR", help="variável de ambiente com o pedido (JSON) vindo do app")
+    p.add_argument("--command-env", metavar="VAR", help="variável de ambiente com o comando (JSON) vindo do app")
     args = p.parse_args()
-    request = None
-    if args.request_env:
-        raw = os.environ.get(args.request_env, "").strip()
-        if raw:
+    command = None
+    if args.command_env:
+        raw = os.environ.get(args.command_env, "").strip()
+        if raw:  # vazio = rodada agendada/manual sem comando
             try:
-                request = json.loads(raw)
+                command = json.loads(raw)
             except json.JSONDecodeError:
-                request = {}
-            # Rodada agendada (null) ou disparo manual sem pedido (campos vazios) = rodada normal.
-            if not isinstance(request, dict) or not any(
-                str(v).strip() for k, v in request.items() if k != "flex"
-            ):
-                request = None
-    sys.exit(run(args.config, args.state, args.out, args.max, request))
+                command = {"type": "invalido"}
+            if not isinstance(command, dict):
+                command = {"type": "invalido"}
+    sys.exit(run(args.config, args.state, args.monitors, args.out, args.max, command))
 
 
 if __name__ == "__main__":

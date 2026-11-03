@@ -3,26 +3,10 @@ name: Buscar resgates
 on:
   workflow_dispatch:
     inputs:
-      program:
-        description: "Programa: all, smiles, latam ou azul"
+      command:
+        description: "Comando do app (JSON). Vazio = rodada normal."
         required: false
         default: ""
-      origin:
-        description: "Origem (ex.: GRU ou SAO)"
-        required: false
-        default: ""
-      destination:
-        description: "Destino (vazio = destinos populares)"
-        required: false
-        default: ""
-      date:
-        description: "Data (AAAA-MM-DD)"
-        required: false
-        default: ""
-      flex:
-        description: "Flexibilidade em dias (0 = data exata, 2 = ± 2 dias)"
-        required: false
-        default: "0"
   # Liga a busca automática quando o primeiro coletor real estiver pronto:
   # schedule:
   #   - cron: "17 */2 * * *"   # a cada 2 horas
@@ -47,15 +31,15 @@ jobs:
         run: pip install -r requirements.txt
       - name: Buscar
         env:
-          # O pedido vem do app; passa por variável de ambiente (nunca direto no shell)
+          # O comando vem do app; passa por variável de ambiente (nunca direto no shell)
           # e é validado pelo coletor.
-          REQUEST: ${{ toJSON(github.event.inputs) }}
-        run: python -m collector --request-env REQUEST
+          COMMAND: ${{ github.event.inputs.command }}
+        run: python -m collector --command-env COMMAND
       - name: Salvar resultados
         run: |
           git config user.name "milhas-bot"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add web/data/results.json data/state.json
+          git add web/data/results.json data/state.json data/monitors.json
           if git diff --cached --quiet; then
             echo "Sem mudanças."
           else

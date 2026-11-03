@@ -1,0 +1,32 @@
+[
+  {
+    "id": "m-sp-florida",
+    "name": "São Paulo → Flórida",
+    "origin": [
+      "GRU",
+      "VCP"
+    ],
+    "destination": [
+      "MIA",
+      "MCO"
+    ],
+    "date_from": "2027-07-01",
+    "date_to": "2027-12-31",
+    "cabins": [
+      "economy",
+      "business"
+    ],
+    "passengers": 1,
+    "alerts": [
+      {
+        "cabin": "economy",
+        "max_miles": 35000
+      },
+      {
+        "cabin": "business",
+        "max_miles": 120000
+      }
+    ],
+    "programs": "all"
+  }
+]
